@@ -1,0 +1,38 @@
+[
+  {
+    "slug": "website-doanh-nghiep",
+    "name": "Website doanh nghiệp",
+    "summary": "Xây dựng website giới thiệu thương hiệu, dịch vụ và năng lực theo chuẩn thương mại.",
+    "benefits": [
+      "Thể hiện uy tín công ty",
+      "Tối ưu hiển thị trên mobile",
+      "Dễ mở rộng nội dung và landing page"
+    ],
+    "price": "Từ 8.000.000đ",
+    "highlight": true
+  },
+  {
+    "slug": "landing-page-ban-hang",
+    "name": "Landing page bán hàng",
+    "summary": "Thiết kế trang đích tập trung chuyển đổi để chạy quảng cáo và thu lead nhanh.",
+    "benefits": [
+      "CTA rõ ràng",
+      "Tốc độ tải nhanh",
+      "Phù hợp chiến dịch marketing"
+    ],
+    "price": "Từ 4.500.000đ",
+    "highlight": true
+  },
+  {
+    "slug": "phan-mem-quan-ly",
+    "name": "Phần mềm quản lý",
+    "summary": "Tùy biến hệ thống quản trị dữ liệu cho quy trình nội bộ và vận hành doanh nghiệp.",
+    "benefits": [
+      "Quản lý dữ liệu tập trung",
+      "Phân quyền rõ ràng",
+      "Báo cáo và thống kê thuận tiện"
+    ],
+    "price": "Theo phạm vi dự án",
+    "highlight": false
+  }
+]

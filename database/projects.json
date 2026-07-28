@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Website giới thiệu công ty thương mại",
+    "category": "Corporate",
+    "summary": "Trình bày dịch vụ, năng lực và form liên hệ ngắn gọn cho khách hàng mới.",
+    "status": "Completed"
+  },
+  {
+    "name": "Landing page chiến dịch quảng cáo",
+    "category": "Marketing",
+    "summary": "Trang đích tối ưu cho chạy ads, tập trung vào CTA và form thu lead.",
+    "status": "Completed"
+  },
+  {
+    "name": "Trang quản trị nội dung",
+    "category": "Admin",
+    "summary": "Quản lý dữ liệu dịch vụ, liên hệ và bài viết cho website công ty.",
+    "status": "In progress"
+  }
+]

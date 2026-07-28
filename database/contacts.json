@@ -1,0 +1,20 @@
+[
+  {
+    "type": "phone",
+    "label": "Hotline tư vấn",
+    "value": "0383158080",
+    "note": "Hỗ trợ trong giờ hành chính"
+  },
+  {
+    "type": "email",
+    "label": "Email liên hệ",
+    "value": "contact@nnc.vn",
+    "note": "Phản hồi yêu cầu báo giá"
+  },
+  {
+    "type": "address",
+    "label": "Địa chỉ văn phòng",
+    "value": "Số nhà 36, Ngõ 321 Dương Tự Minh, Tổ 26, Phường Quan Triều, Tỉnh Thái Nguyên",
+    "note": "Tiếp khách theo lịch hẹn"
+  }
+]
