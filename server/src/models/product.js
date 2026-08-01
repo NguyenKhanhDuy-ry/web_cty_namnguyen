@@ -14,9 +14,9 @@ const productSchema = new mongoose.Schema(
       trim: true
     },
     category: {
-      type: String,
-      required: true,
-      trim: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true
     },
     name: {
       type: String,
@@ -47,10 +47,8 @@ const productSchema = new mongoose.Schema(
       min: 0,
       default: 0
     },
-    image: {
-      type: String,
-      default: ""
-    },
+    images: [{ type: String }],
+    thumbnail: { type: String, default: "" },
     badge: {
       type: String,
       default: ""
@@ -75,7 +73,12 @@ const productSchema = new mongoose.Schema(
       ram: { type: String, default: "" },
       ssd: { type: String, default: "" },
       gpu: { type: String, default: "" },
-      display: { type: String, default: "" }
+      display: { type: String, default: "" },
+      ports: { type: String, default: "" },
+      os: { type: String, default: "" },
+      weight: { type: String, default: "" },
+      dimensions: { type: String, default: "" },
+      color: { type: String, default: "" }
     },
     isActive: {
       type: Boolean,

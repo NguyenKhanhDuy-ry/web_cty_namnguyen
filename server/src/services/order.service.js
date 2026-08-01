@@ -9,13 +9,13 @@ const createOrder = async (payload, currentUser = null) => {
   const { customer, items, paymentMethod } = payload;
 
   if (!customer?.fullName || !customer?.email || !customer?.phone || !customer?.address) {
-    const error = new Error("Vui lòng nhập đầy đủ thông tin nhận hàng");
+    const error = new Error("Vui long nhap day du thong tin nhan hang");
     error.statusCode = 400;
     throw error;
   }
 
   if (!Array.isArray(items) || !items.length) {
-    const error = new Error("Giỏ hàng đang trống");
+    const error = new Error("Gio hang dang trong");
     error.statusCode = 400;
     throw error;
   }
@@ -28,7 +28,7 @@ const createOrder = async (payload, currentUser = null) => {
     const product = productMap.get(String(item.productId));
 
     if (!product) {
-      const error = new Error("Có sản phẩm không hợp lệ trong giỏ hàng");
+      const error = new Error("Co san pham khong hop le trong gio hang");
       error.statusCode = 400;
       throw error;
     }

@@ -84,7 +84,7 @@ function CheckoutPage() {
           <h1>Chưa có sản phẩm để thanh toán</h1>
           <p>Bạn cần thêm sản phẩm vào giỏ trước khi thanh toán.</p>
           <Link className="ecom-btn ecom-btn-primary" to="/">
-            Quay lai mua sam
+            Quay lại mua sắm
           </Link>
         </div>
       </section>
@@ -98,12 +98,12 @@ function CheckoutPage() {
           <div className="cart-panel-header">
             <div>
               <p className="section-label">Thanh toán</p>
-              <h1>Thong tin nhan hang</h1>
+              <h1>Thông tin nhận hàng</h1>
             </div>
           </div>
 
           <div className="checkout-grid">
-            <input name="fullName" placeholder="Ho va ten" value={formData.fullName} onChange={handleChange} required />
+            <input name="fullName" placeholder="Họ và tên" value={formData.fullName} onChange={handleChange} required />
             <input name="email" placeholder="Email" type="email" value={formData.email} onChange={handleChange} required />
             <input name="phone" placeholder="Số điện thoại" value={formData.phone} onChange={handleChange} required />
             <input name="address" placeholder="Địa chỉ giao hàng" value={formData.address} onChange={handleChange} required />
@@ -112,7 +112,7 @@ function CheckoutPage() {
           <textarea
             className="checkout-note"
             name="note"
-            placeholder="Ghi chú đơn hàng"
+            placeholder="Ghi chu don hang"
             value={formData.note}
             onChange={handleChange}
             rows="4"
@@ -137,7 +137,7 @@ function CheckoutPage() {
                 checked={formData.paymentMethod === "banking"}
                 onChange={handleChange}
               />
-              <span>Chuyển khỏan ngân hàng</span>
+              <span>Chuyển khoản ngân hàng</span>
             </label>
           </div>
 
@@ -175,7 +175,7 @@ function CheckoutPage() {
           </div>
           <div className="summary-line">
             <span>Vận chuyển</span>
-            <strong>{displayShippingFee === 0 ? "Miễn phí" : formatCurrency(displayShippingFee)}</strong>
+            <strong>{displayShippingFee === 0 ? "Mien phi" : formatCurrency(displayShippingFee)}</strong>
           </div>
           <div className="summary-line summary-line-total">
             <span>Tổng thanh toán</span>

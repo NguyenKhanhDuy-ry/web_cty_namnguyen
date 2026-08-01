@@ -10,14 +10,18 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
-    "express": "^5.1.0",
+    "cloudinary": "^1.41.3",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.16.0",
-    "react-express-mongodb-starter": "file:.."
+    "mongoose": "^8.24.2",
+    "multer": "^2.2.0",
+    "multer-storage-cloudinary": "^4.0.0",
+    "react-express-mongodb-starter": "file:..",
+    "streamifier": "^0.1.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.14"
   }
 }

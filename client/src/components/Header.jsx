@@ -1,13 +1,19 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
+import SearchBox from "./SearchBox";
 
 const navItems = [
   { label: "Trang chủ", href: "/" },
-  { label: "Laptop", href: "/#categories" },
-  { label: "Gaming", href: "/#featured-products" },
-  { label: "Văn phòng", href: "/#categories" },
-  { label: "MacBook", href: "/#featured-products" },
+  {
+    label: "Laptop",
+    href: "/#categories",
+    submenu: [
+      { label: "Laptop Gaming", href: "/danh-muc/laptop-gaming" },
+      { label: "Laptop Văn phòng", href: "/danh-muc/laptop-van-phong" },
+      { label: "MacBook", href: "/danh-muc/macbook" }
+    ]
+  },
   { label: "Khuyến mãi", href: "/#newsletter" },
   { label: "Tin tức", href: "/#newsletter" },
   { label: "Liên hệ", href: "/#footer-contact" }
@@ -33,6 +39,13 @@ function Header() {
   const { totalItems } = useCart();
   const dashboardPath = user?.role === "admin" ? "/quan-tri" : "/tai-khoan";
   const accountPath = isAuthenticated ? dashboardPath : "/dang-nhap";
+  const location = useLocation();
+
+  const handleScrollToTop = () => {
+    if (location.pathname === "/") {
+      window.scrollTo(0, 0);
+    }
+  };
 
   return (
     <header className="site-header">
@@ -49,7 +62,7 @@ function Header() {
         </div>
       </div>
       <div className="site-header-inner">
-        <Link className="brand brand-ecom" to="/">
+        <Link className="brand brand-ecom" to="/" onClick={handleScrollToTop}>
           <span className="brand-mark">NN</span>
           <span className="brand-copy">
             <strong>NAM NGUYEN</strong>
@@ -58,34 +71,38 @@ function Header() {
         </Link>
         <nav className="nav nav-ecom" aria-label="Dieu huong chinh">
           {navItems.map((item, index) => (
-            <a key={item.label} className={index === 0 ? "is-active" : ""} href={item.href}>
-              {item.label}
-            </a>
+            <div key={item.label} className={`nav-item ${index === 0 ? "is-active" : ""}`}>
+              {item.submenu ? (
+                <span className="nav-link-with-submenu">
+                  {item.label}
+                  <svg className="nav-chevron" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+                </span>
+              ) : item.href.startsWith("/") ? (
+                <Link to={item.href} onClick={item.href === "/" ? handleScrollToTop : undefined}>{item.label}</Link>
+              ) : (
+                <a href={item.href}>{item.label}</a>
+              )}
+              {item.submenu && (
+                <ul className="nav-submenu">
+                  {item.submenu.map((subItem) => (
+                    <li key={subItem.label}>
+                      <Link to={subItem.href}>{subItem.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           ))}
         </nav>
-        <div className="header-search">
-          <input type="text" placeholder="Tìm laptop, linh kiện..." aria-label="Tìm kiếm sản phẩm" />
-        </div>
+        <SearchBox />
         <div className="header-actions header-actions-ecom">
-          <Link className="header-icon-link" aria-label="Tài khoản" to={accountPath}>
+          <Link className="header-icon-link" aria-label="Tai khoan" to={accountPath}>
             <HeaderIcon>
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
                 <path d="M5 20a7 7 0 0 1 14 0" />
               </svg>
             </HeaderIcon>
-          </Link>
-          <span className="header-icon-link header-icon-favorite">
-            <HeaderIcon>
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="m12 20-1.4-1.28C5.4 14 2 10.9 2 7.09 2 4 4.42 1.6 7.5 1.6c1.74 0 3.41.81 4.5 2.09A6.09 6.09 0 0 1 16.5 1.6C19.58 1.6 22 4 22 7.09c0 3.81-3.4 6.91-8.6 11.63L12 20Z" />
-              </svg>
-            </HeaderIcon>
-            <i>3</i>
-          </span>
-          <Link className="purchase-btn purchase-btn-small purchase-btn-cart" to="/gio-hang">
-            Giỏ hàng
-            {totalItems ? <b>{totalItems}</b> : null}
           </Link>
           {isAuthenticated ? (
             <>

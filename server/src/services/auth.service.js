@@ -51,7 +51,7 @@ const register = async ({ fullName, email, password }) => {
   const existingUser = await User.findOne({ email: normalizedEmail });
 
   if (existingUser) {
-    const error = new Error("Email đã tồn tại trong hệ thống");
+    const error = new Error("Email da ton tai trong he thong");
     error.statusCode = 409;
     throw error;
   }
@@ -77,7 +77,7 @@ const login = async ({ email, password }) => {
   const user = await User.findOne({ email: normalizedEmail });
 
   if (!user || !user.isActive) {
-    const error = new Error("Thông tin đăng nhập không hợp lệ");
+    const error = new Error("Thong tin dang nhap khong hop le");
     error.statusCode = 401;
     throw error;
   }
@@ -85,7 +85,7 @@ const login = async ({ email, password }) => {
   const isPasswordMatched = await bcrypt.compare(password, user.passwordHash);
 
   if (!isPasswordMatched) {
-    const error = new Error("Thông tin đăng nhập không hợp lệ");
+    const error = new Error("Thong tin dang nhap khong hop le");
     error.statusCode = 401;
     throw error;
   }
@@ -100,7 +100,7 @@ const getProfileById = async (userId) => {
   const user = await User.findById(userId).lean();
 
   if (!user || !user.isActive) {
-    const error = new Error("Không tìm thấy tài khoản");
+    const error = new Error("Khong tim thay tai khoan");
     error.statusCode = 401;
     throw error;
   }

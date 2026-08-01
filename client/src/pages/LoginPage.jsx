@@ -34,8 +34,7 @@ function LoginPage() {
       );
     } catch (requestError) {
       setError(
-        requestError.response?.data?.message ||
-          "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin."
+        requestError.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin."
       );
     } finally {
       setSubmitting(false);
@@ -51,8 +50,8 @@ function LoginPage() {
   return (
     <section className="auth-portal">
       <div className="auth-portal-card">
-        <div className="auth-portal-logo">N</div>
-        <h1>Log in to see more</h1>
+        <div className="auth-portal-logo">NN</div>
+        <h1>Đăng nhập tài khoản</h1>
 
         <form className="auth-portal-form" onSubmit={handleSubmit}>
           <input
@@ -61,7 +60,7 @@ function LoginPage() {
             onChange={(event) =>
               setForm((current) => ({ ...current, email: event.target.value }))
             }
-            placeholder="Email or phone number"
+            placeholder="Email hoặc số điện thoại"
             autoComplete="username"
           />
           <input
@@ -70,34 +69,32 @@ function LoginPage() {
             onChange={(event) =>
               setForm((current) => ({ ...current, password: event.target.value }))
             }
-            placeholder="Password"
+            placeholder="Mật khẩu"
             autoComplete="current-password"
           />
           {error ? <p className="form-error auth-portal-error">{error}</p> : null}
           <button className="auth-portal-submit" type="submit" disabled={submitting}>
-            {submitting ? "Dang xu ly..." : "Log in"}
+            {submitting ? "Đang xử lý..." : "Đăng nhập"}
           </button>
         </form>
 
-        <p className="auth-portal-divider">OR</p>
+        <p className="auth-portal-divider">HOẶC</p>
 
         <div className="auth-portal-socials">
           <button className="auth-social-btn auth-social-facebook" type="button" onClick={() => handleSocialLogin("Facebook")}>
-            <span>f</span>
-            Continue with Facebook
+            Tiếp tục với Facebook
           </button>
           <button className="auth-social-btn auth-social-google" type="button" onClick={() => handleSocialLogin("Google")}>
-            <span>G</span>
-            Continue with Google
+            Tiếp tục với Google
           </button>
         </div>
 
         {socialMessage ? <p className="sync-note auth-portal-note">{socialMessage}</p> : null}
 
         <div className="auth-portal-links">
-          <Link to="/quen-mat-khau">Forgot your password?</Link>
+          <Link to="/quen-mat-khau">Quên mật khẩu?</Link>
           <p>
-            Not on Nam Nguyen yet? <Link to="/dang-ky">Sign Up</Link>
+            Chưa có tài khoản? <Link to="/dang-ky">Đăng ký ngay</Link>
           </p>
         </div>
       </div>

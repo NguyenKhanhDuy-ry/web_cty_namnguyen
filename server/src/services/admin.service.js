@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 
+const Category = require("../models/category");
 const Lead = require("../models/lead");
 const Order = require("../models/order");
 const Product = require("../models/product");
@@ -67,7 +68,8 @@ const normalizeProductPayload = (payload = {}, baseProduct = {}) => {
     price: Number(payload.price ?? baseProduct.price ?? 0),
     oldPrice: Number(payload.oldPrice ?? baseProduct.oldPrice ?? 0),
     stock: Number(payload.stock ?? baseProduct.stock ?? 0),
-    image: (payload.image ?? baseProduct.image ?? "").trim(),
+    images: Array.isArray(payload.images) ? payload.images : [],
+    thumbnail: (payload.thumbnail || (Array.isArray(payload.images) && payload.images.length > 0 ? payload.images[0] : baseProduct.thumbnail) || "").trim(),
     badge: (payload.badge ?? baseProduct.badge ?? "").trim(),
     rating: Number(payload.rating ?? baseProduct.rating ?? 4.8),
     reviewCount: Number(payload.reviewCount ?? baseProduct.reviewCount ?? 0),
@@ -78,7 +80,13 @@ const normalizeProductPayload = (payload = {}, baseProduct = {}) => {
       ram: (payload.specs?.ram ?? baseProduct.specs?.ram ?? "").trim(),
       ssd: (payload.specs?.ssd ?? baseProduct.specs?.ssd ?? "").trim(),
       gpu: (payload.specs?.gpu ?? baseProduct.specs?.gpu ?? "").trim(),
-      display: (payload.specs?.display ?? baseProduct.specs?.display ?? "").trim()
+      display: (payload.specs?.display ?? baseProduct.specs?.display ?? "").trim(),
+      gallery: Array.isArray(payload.specs?.gallery) ? payload.specs.gallery : [],
+      ports: (payload.specs?.ports ?? baseProduct.specs?.ports ?? "").trim(),
+      os: (payload.specs?.os ?? baseProduct.specs?.os ?? "").trim(),
+      weight: (payload.specs?.weight ?? baseProduct.specs?.weight ?? "").trim(),
+      dimensions: (payload.specs?.dimensions ?? baseProduct.specs?.dimensions ?? "").trim(),
+      color: (payload.specs?.color ?? baseProduct.specs?.color ?? "").trim()
     }
   };
 };
@@ -210,13 +218,13 @@ const updateUser = async (userId, payload = {}, currentUser) => {
 
   const isEditingSelf = currentUser?.id === userId;
 
-  if (isEditingSelf && payload.role && payload.role !== user.role) {
+  if (isEditingSelf && payload.role && payload.role !== user.role) { // eslint-disable-line
     const error = new Error("Bạn không thể tự thay đổi vai trò của chính mình");
     error.statusCode = 400;
     throw error;
   }
 
-  if (isEditingSelf && payload.isActive === false) {
+  if (isEditingSelf && payload.isActive === false) { // eslint-disable-line
     const error = new Error("Bạn không thể tự khóa tài khoản của chính mình");
     error.statusCode = 400;
     throw error;
@@ -286,6 +294,67 @@ const updateProduct = async (productId, payload = {}) => {
   return product;
 };
 
+const deleteProduct = async (productId) => {
+  const product = await Product.findByIdAndDelete(productId);
+
+  if (!product) {
+    const error = new Error("Không tìm thấy sản phẩm để xóa");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return { message: "Sản phẩm đã được xóa thành công." };
+};
+
+const getCategories = async () => {
+  return Category.find().sort({ name: 1 }).lean();
+};
+
+const createCategory = async (payload = {}) => {
+  const name = (payload.name || "").trim();
+  if (!name) {
+    const error = new Error("Tên danh mục là bắt buộc");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const slug = payload.slug ? slugify(payload.slug) : slugify(name);
+  const existing = await Category.findOne({ $or: [{ name }, { slug }] });
+  if (existing) {
+    const error = new Error("Tên hoặc slug danh mục đã tồn tại");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  return Category.create({ name, slug, description: (payload.description || "").trim() });
+};
+
+const updateCategory = async (categoryId, payload = {}) => {
+  const category = await Category.findById(categoryId);
+  if (!category) {
+    const error = new Error("Không tìm thấy danh mục");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (payload.name) category.name = payload.name.trim();
+  if (payload.slug) category.slug = slugify(payload.slug);
+  if (payload.description) category.description = payload.description.trim();
+
+  await category.save();
+  return category;
+};
+
+const deleteCategory = async (categoryId) => {
+  const category = await Category.findByIdAndDelete(categoryId);
+  if (!category) {
+    const error = new Error("Không tìm thấy danh mục để xóa");
+    error.statusCode = 404;
+    throw error;
+  }
+  return { message: "Danh mục đã được xóa thành công." };
+};
+
 const getOrders = async () => {
   return Order.find().sort({ createdAt: -1 }).lean();
 };
@@ -336,6 +405,18 @@ const updateLeadStatus = async (leadId, status) => {
   return lead;
 };
 
+const ensureSampleData = async () => {
+  const categoryCount = await Category.countDocuments();
+  if (categoryCount !== 3) {
+    await Category.deleteMany({});
+    await Category.insertMany([
+      { name: "Laptop Gaming", slug: "laptop-gaming", description: "Laptop hiệu năng cao cho game thủ" },
+      { name: "Laptop Văn phòng", slug: "laptop-van-phong", description: "Laptop mỏng nhẹ cho công việc" },
+      { name: "MacBook", slug: "macbook", description: "Laptop cao cấp từ Apple" }
+    ]);
+  }
+};
+
 module.exports = {
   ORDER_STATUSES,
   LEAD_STATUSES,
@@ -347,8 +428,14 @@ module.exports = {
   getProducts,
   createProduct,
   updateProduct,
+  deleteProduct,
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   getOrders,
   updateOrderStatus,
   getLeads,
-  updateLeadStatus
+  updateLeadStatus,
+  ensureSampleData
 };

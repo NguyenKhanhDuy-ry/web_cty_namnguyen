@@ -1,20 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import ImageUploader from "../components/ImageUploader";
 import { formatCurrency } from "../utils/formatCurrency";
-import { formatDate } from "../utils/formatDate";
+import { formatDate, formatDateTime } from "../utils/formatDate";
 
 const ADMIN_TABS = [
-  { id: "overview", label: "Dashboard", shortLabel: "DB" },
-  { id: "products", label: "Products", shortLabel: "PR" },
-  { id: "orders", label: "Orders", shortLabel: "OR" },
-  { id: "users", label: "Customers", shortLabel: "CU" },
-  { id: "leads", label: "Leads", shortLabel: "LE" }
+  { id: "overview", label: "Bảng điều khiển", shortLabel: "BĐK" },
+  { id: "products", label: "Sản phẩm", shortLabel: "SP" },
+  { id: "orders", label: "Đơn hàng", shortLabel: "ĐH" },
+  { id: "users", label: "Người dùng", shortLabel: "ND" },
+  { id: "leads", label: "Khách hàng", shortLabel: "KH" },
+  { id: "categories", label: "Danh mục", shortLabel: "DM" }
 ];
 
-const ORDER_STATUSES = ["pending", "confirmed", "shipping", "completed", "cancelled"];
-const LEAD_STATUSES = ["new", "contacted", "qualified", "closed"];
-const USER_ROLES = ["admin", "user"];
+const ORDER_STATUSES = [
+  { value: "pending", label: "Chờ xác nhận" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "shipping", label: "Đang giao" },
+  { value: "completed", label: "Hoàn thành" },
+  { value: "cancelled", label: "Đã hủy" }
+];
+
+const LEAD_STATUSES = [
+  { value: "new", label: "Mới" },
+  { value: "contacted", label: "Đã liên hệ" },
+  { value: "qualified", label: "Tiềm năng" },
+  { value: "closed", label: "Đã chốt" }
+];
+
+const USER_ROLES = [
+  { value: "admin", label: "Quản trị viên" },
+  { value: "user", label: "Người dùng" }
+];
+
+const getStatusLabel = (statuses, value) => statuses.find((s) => s.value === value)?.label || value;
 
 const createEmptyProductForm = () => ({
   name: "",
@@ -26,7 +46,7 @@ const createEmptyProductForm = () => ({
   price: 0,
   oldPrice: 0,
   stock: 0,
-  image: "",
+  images: [],
   badge: "",
   rating: 4.8,
   reviewCount: 0,
@@ -37,7 +57,12 @@ const createEmptyProductForm = () => ({
     ram: "",
     ssd: "",
     gpu: "",
-    display: ""
+    display: "",
+    ports: "",
+    os: "",
+    weight: "",
+    dimensions: "",
+    color: ""
   }
 });
 
@@ -46,6 +71,12 @@ const createEmptyUserForm = () => ({
   email: "",
   password: "",
   role: "user"
+});
+
+const createEmptyCategoryForm = () => ({
+  name: "",
+  slug: "",
+  description: ""
 });
 
 const createDashboardFallback = () => ({
@@ -92,11 +123,14 @@ function AdminLeadsPage() {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [userDrafts, setUserDrafts] = useState({});
   const [orderDrafts, setOrderDrafts] = useState({});
   const [leadDrafts, setLeadDrafts] = useState({});
   const [productForm, setProductForm] = useState(createEmptyProductForm);
   const [editingProductId, setEditingProductId] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState("");
+  const [categoryForm, setCategoryForm] = useState(createEmptyCategoryForm);
   const [newUserForm, setNewUserForm] = useState(createEmptyUserForm);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -108,24 +142,27 @@ function AdminLeadsPage() {
       setLoading(true);
       setError("");
 
-      const [dashboardResponse, usersResponse, productsResponse, ordersResponse, leadsResponse] = await Promise.all([
+      const [dashboardResponse, usersResponse, productsResponse, ordersResponse, leadsResponse, categoriesResponse] = await Promise.all([
         api.get("/admin/dashboard"),
         api.get("/admin/users"),
         api.get("/admin/products"),
         api.get("/admin/orders"),
-        api.get("/admin/leads")
+        api.get("/admin/leads"),
+        api.get("/admin/categories")
       ]);
 
       const nextUsers = usersResponse.data?.data || [];
       const nextProducts = productsResponse.data?.data || [];
       const nextOrders = ordersResponse.data?.data || [];
       const nextLeads = leadsResponse.data?.data || [];
+      const nextCategories = categoriesResponse.data?.data || [];
 
       setDashboard(dashboardResponse.data?.data || createDashboardFallback());
       setUsers(nextUsers);
       setProducts(nextProducts);
       setOrders(nextOrders);
       setLeads(nextLeads);
+      setCategories(nextCategories);
       setUserDrafts(
         Object.fromEntries(
           nextUsers.map((item) => [
@@ -143,7 +180,7 @@ function AdminLeadsPage() {
       setOrderDrafts(Object.fromEntries(nextOrders.map((item) => [item._id, item.status])));
       setLeadDrafts(Object.fromEntries(nextLeads.map((item) => [item._id, item.status])));
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Khong the tai du lieu quan tri.");
+      setError(requestError.response?.data?.message || "Không thể tải dữ liệu quản trị.");
     } finally {
       setLoading(false);
     }
@@ -155,6 +192,12 @@ function AdminLeadsPage() {
 
   const handleProductFieldChange = (event) => {
     const { name, value, type, checked } = event.target;
+
+    if (name === "images") {
+      const thumbnail = Array.isArray(value) && value.length > 0 ? value[0] : "";
+      setProductForm((current) => ({ ...current, images: value, thumbnail }));
+      return;
+    }
 
     setProductForm((currentForm) => {
       if (name.startsWith("specs.")) {
@@ -201,7 +244,7 @@ function AdminLeadsPage() {
       price: product.price || 0,
       oldPrice: product.oldPrice || 0,
       stock: product.stock || 0,
-      image: product.image || "",
+      images: product.images || [],
       badge: product.badge || "",
       rating: product.rating || 4.8,
       reviewCount: product.reviewCount || 0,
@@ -212,7 +255,12 @@ function AdminLeadsPage() {
         ram: product.specs?.ram || "",
         ssd: product.specs?.ssd || "",
         gpu: product.specs?.gpu || "",
-        display: product.specs?.display || ""
+        display: product.specs?.display || "",
+        ports: product.specs?.ports || "",
+        os: product.specs?.os || "",
+        weight: product.specs?.weight || "",
+        dimensions: product.specs?.dimensions || "",
+        color: product.specs?.color || ""
       }
     });
     setActiveTab("products");
@@ -234,16 +282,16 @@ function AdminLeadsPage() {
 
       if (editingProductId) {
         await api.patch(`/admin/products/${editingProductId}`, productForm);
-        setNotice("Da cap nhat san pham.");
+        setNotice("Đã cập nhật sản phẩm thành công.");
       } else {
         await api.post("/admin/products", productForm);
-        setNotice("Da tao san pham moi.");
+        setNotice("Đã tạo sản phẩm mới thành công.");
       }
 
       resetProductForm();
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Khong the luu san pham.");
+      setError(requestError.response?.data?.message || "Không thể lưu sản phẩm.");
     } finally {
       setSubmitting(false);
     }
@@ -260,10 +308,86 @@ function AdminLeadsPage() {
         isActive: !product.isActive
       });
 
-      setNotice(product.isActive ? "Da an san pham." : "Da kich hoat lai san pham.");
+      setNotice(product.isActive ? "Đã ẩn sản phẩm." : "Đã kích hoạt lại sản phẩm.");
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Khong the cap nhat trang thai san pham.");
+      setError(requestError.response?.data?.message || "Không thể cập nhật trạng thái sản phẩm.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này không? Hành động này không thể hoàn tác.")) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError("");
+      setNotice("");
+      await api.delete(`/admin/products/${productId}`);
+      setNotice("Đã xóa sản phẩm thành công.");
+      await loadAdminData();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Không thể xóa sản phẩm.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCategoryFieldChange = (event) => {
+    const { name, value } = event.target;
+    setCategoryForm((currentForm) => ({ ...currentForm, [name]: value }));
+  };
+
+  const handleEditCategory = (category) => {
+    setEditingCategoryId(category._id);
+    setCategoryForm({
+      name: category.name || "",
+      slug: category.slug || "",
+      description: category.description || ""
+    });
+  };
+
+  const resetCategoryForm = () => {
+    setEditingCategoryId("");
+    setCategoryForm(createEmptyCategoryForm());
+  };
+
+  const handleSubmitCategory = async (event) => {
+    event.preventDefault();
+    try {
+      setSubmitting(true);
+      setError("");
+      setNotice("");
+      if (editingCategoryId) {
+        await api.patch(`/admin/categories/${editingCategoryId}`, categoryForm);
+        setNotice("Đã cập nhật danh mục thành công.");
+      } else {
+        await api.post("/admin/categories", categoryForm);
+        setNotice("Đã tạo danh mục mới thành công.");
+      }
+      resetCategoryForm();
+      await loadAdminData();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Không thể lưu danh mục.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này không? Các sản phẩm thuộc danh mục này sẽ không bị xóa.")) return;
+    try {
+      setSubmitting(true);
+      setError("");
+      setNotice("");
+      await api.delete(`/admin/categories/${categoryId}`);
+      setNotice("Đã xóa danh mục thành công.");
+      await loadAdminData();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Không thể xóa danh mục.");
     } finally {
       setSubmitting(false);
     }
@@ -286,11 +410,11 @@ function AdminLeadsPage() {
       setNotice("");
 
       await api.post("/admin/users", newUserForm);
-      setNotice("Da tao tai khoan moi.");
+      setNotice("Đã tạo tài khoản mới thành công.");
       setNewUserForm(createEmptyUserForm());
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Khong the tao tai khoan.");
+      setError(requestError.response?.data?.message || "Không thể tạo tài khoản.");
     } finally {
       setSubmitting(false);
     }
@@ -313,10 +437,10 @@ function AdminLeadsPage() {
       setNotice("");
 
       await api.patch(`/admin/users/${userId}`, userDrafts[userId]);
-      setNotice("Da cap nhat tai khoan.");
+      setNotice("Đã cập nhật tài khoản thành công.");
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Khong the cap nhat tai khoan.");
+      setError(requestError.response?.data?.message || "Không thể cập nhật tài khoản.");
     } finally {
       setSubmitting(false);
     }
@@ -332,10 +456,10 @@ function AdminLeadsPage() {
         status: orderDrafts[orderId]
       });
 
-      setNotice("Da cap nhat trang thai don hang.");
+      setNotice("Đã cập nhật trạng thái đơn hàng.");
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Khong the cap nhat don hang.");
+      setError(requestError.response?.data?.message || "Không thể cập nhật đơn hàng.");
     } finally {
       setSubmitting(false);
     }
@@ -351,39 +475,44 @@ function AdminLeadsPage() {
         status: leadDrafts[leadId]
       });
 
-      setNotice("Da cap nhat lead.");
+      setNotice("Đã cập nhật khách hàng tiềm năng.");
       await loadAdminData();
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Khong the cap nhat lead.");
+      setError(requestError.response?.data?.message || "Không thể cập nhật khách hàng tiềm năng.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const productImagesValue = useMemo(() => {
+    const images = productForm.images || [];
+    return Array.isArray(images) ? images : [];
+  }, [productForm.images]);
+
   const trendBars = normalizeTrendBars(orders);
   const metricCards = [
     {
-      title: "Total Products Live",
+      title: "Tổng sản phẩm",
       value: dashboard.stats.totalProducts,
-      subtext: `${dashboard.stats.activeProducts} san pham dang kinh doanh`,
+      subtext: `${dashboard.stats.activeProducts} sản phẩm đang kinh doanh`,
       growth: getGrowthText(dashboard.stats.activeProducts, Math.max(dashboard.stats.totalProducts, 1))
     },
     {
-      title: "Inventory Low Items",
+      title: "Sắp hết hàng",
       value: dashboard.lowStockProducts.length,
-      subtext: "Can xu ly som trong kho",
+      subtext: "Cần xử lý sớm trong kho",
       growth: `-${dashboard.lowStockProducts.length || 0}%`
     },
     {
-      title: "Monthly Revenue",
+      title: "Doanh thu tháng",
       value: formatCurrency(dashboard.stats.totalRevenue),
-      subtext: `${dashboard.stats.totalOrders} don hang toan he thong`,
+      subtext: `${dashboard.stats.totalOrders} đơn hàng toàn hệ thống`,
       growth: getGrowthText(dashboard.stats.totalOrders, Math.max(dashboard.stats.totalUsers, 1))
     },
     {
-      title: "Orders Awaiting",
+      title: "Đơn hàng chờ",
       value: dashboard.stats.pendingOrders,
-      subtext: `${dashboard.stats.newLeads} lead moi chua xu ly`,
+      subtext: `${dashboard.stats.newLeads} khách hàng mới chưa xử lý`,
       growth: getGrowthText(dashboard.stats.pendingOrders, Math.max(dashboard.stats.totalOrders, 1))
     }
   ];
@@ -396,7 +525,7 @@ function AdminLeadsPage() {
             <span className="admin-sidebar-logo">NN</span>
             <div>
               <strong>Nam Nguyen</strong>
-              <span>Admin Suite</span>
+              <span>Trang quản trị</span>
             </div>
           </div>
 
@@ -420,7 +549,7 @@ function AdminLeadsPage() {
               <span>{user?.email}</span>
             </div>
             <button className="btn btn-secondary admin-sidebar-logout" type="button" onClick={logout}>
-              Logout
+              Đăng xuất
             </button>
           </div>
         </aside>
@@ -428,24 +557,25 @@ function AdminLeadsPage() {
         <div className="admin-main">
           <header className="admin-topbar">
             <div>
-              <p className="eyebrow">Product overview</p>
-              <h1>{activeTab === "overview" ? "Admin Dashboard" : ADMIN_TABS.find((tab) => tab.id === activeTab)?.label}</h1>
+              <p className="eyebrow">Tổng quan hệ thống</p>
+              <h1>{ADMIN_TABS.find((tab) => tab.id === activeTab)?.label || "Bảng điều khiển"}</h1>
             </div>
 
             <div className="admin-topbar-actions">
-              <span className="admin-refresh-pill">Last updated just now</span>
+              <span className="admin-refresh-pill">Cập nhật tức thì</span>
               <button className="btn btn-secondary" type="button" onClick={loadAdminData}>
-                Refresh Data
+                Làm mới
               </button>
             </div>
           </header>
 
-          {loading ? <div className="admin-empty">Dang tai du lieu...</div> : null}
+          {loading ? <div className="admin-empty">Đang tải dữ liệu...</div> : null}
           {!loading && error ? <div className="admin-empty admin-empty-error">{error}</div> : null}
-          {!loading && !error && notice ? <div className="admin-notice">{notice}</div> : null}
 
           {!loading && !error && (
             <div className="admin-content-stack">
+              {notice ? <div className="admin-notice">{notice}</div> : null}
+
               <section className="admin-kpi-grid">
                 {metricCards.map((card) => (
                   <article key={card.title} className="admin-kpi-card">
@@ -467,11 +597,11 @@ function AdminLeadsPage() {
                   <section className="admin-overview-grid">
                     <article className="admin-card-panel admin-chart-panel">
                       <div className="admin-section-head">
-                        <h2>Sales Trends</h2>
+                        <h2>Xu hướng doanh thu</h2>
                         <div className="admin-chart-tools">
-                          <span>Jun 2026</span>
+                          <span>Tháng 7, 2026</span>
                           <button className="btn btn-secondary" type="button">
-                            Export
+                            Xuất báo cáo
                           </button>
                         </div>
                       </div>
@@ -489,35 +619,35 @@ function AdminLeadsPage() {
 
                     <article className="admin-card-panel admin-summary-panel">
                       <div className="admin-section-head">
-                        <h2>Promotion Performance</h2>
-                        <span className="admin-summary-window">Last 7 Days</span>
+                        <h2>Hiệu suất khuyến mãi</h2>
+                        <span className="admin-summary-window">7 ngày qua</span>
                       </div>
 
                       <div className="admin-summary-metrics">
                         <div className="admin-mini-card">
-                          <span>Coupon Usage</span>
+                          <span>Lượt dùng coupon</span>
                           <strong>{dashboard.stats.totalOrders ? "78.2%" : "0%"}</strong>
-                          <em>Used in current flow</em>
+                          <em>Đã dùng trong luồng</em>
                         </div>
                         <div className="admin-mini-card">
-                          <span>Conversion Rate</span>
+                          <span>Tỷ lệ chuyển đổi</span>
                           <strong>{dashboard.stats.totalLeads ? "12.8%" : "0%"}</strong>
-                          <em>Lead to order estimate</em>
+                          <em>Ước tính từ KH tiềm năng</em>
                         </div>
                         <div className="admin-mini-card">
                           <span>Revenue</span>
                           <strong>{formatCurrency(dashboard.stats.totalRevenue)}</strong>
-                          <em>Captured from orders</em>
+                          <em>Ghi nhận từ đơn hàng</em>
                         </div>
                         <div className="admin-mini-card">
-                          <span>Avg Discount / Order</span>
+                          <span>Giảm giá trung bình</span>
                           <strong>{dashboard.stats.totalOrders ? "$5.45" : "$0.00"}</strong>
-                          <em>Estimated campaign effect</em>
+                          <em>Hiệu quả chiến dịch</em>
                         </div>
                       </div>
 
                       <button className="admin-outline-link" type="button" onClick={() => setActiveTab("orders")}>
-                        View full order report
+                        Xem báo cáo đơn hàng đầy đủ
                       </button>
                     </article>
                   </section>
@@ -525,7 +655,7 @@ function AdminLeadsPage() {
                   <section className="admin-overview-grid admin-overview-grid-bottom">
                     <article className="admin-card-panel">
                       <div className="admin-section-head">
-                        <h2>Inventory Warnings</h2>
+                        <h2>Cảnh báo tồn kho</h2>
                       </div>
 
                       <div className="admin-warning-list">
@@ -533,7 +663,7 @@ function AdminLeadsPage() {
                           <div key={product._id} className="admin-warning-item">
                             <div>
                               <strong>{product.name}</strong>
-                              <span>{product.brand} - con {product.stock} san pham</span>
+                              <span>{product.brand} - còn {product.stock} sản phẩm</span>
                             </div>
                             <div className="admin-warning-bar">
                               <span style={{ width: `${Math.max(8, Math.min(100, product.stock * 12))}%` }} />
@@ -541,14 +671,14 @@ function AdminLeadsPage() {
                           </div>
                         ))}
                         {!dashboard.lowStockProducts.length ? (
-                          <div className="admin-empty-inline">Kho dang an toan, chua co san pham can canh bao.</div>
+                          <div className="admin-empty-inline">Kho đang an toàn, chưa có sản phẩm cần cảnh báo.</div>
                         ) : null}
                       </div>
                     </article>
 
                     <article className="admin-card-panel">
                       <div className="admin-section-head">
-                        <h2>Recent Orders</h2>
+                        <h2>Đơn hàng gần đây</h2>
                       </div>
 
                       <div className="admin-list">
@@ -562,7 +692,7 @@ function AdminLeadsPage() {
                           </article>
                         ))}
                         {!dashboard.recentOrders.length ? (
-                          <div className="admin-empty-inline">Chua co don hang nao de hien thi.</div>
+                          <div className="admin-empty-inline">Chưa có đơn hàng nào để hiển thị.</div>
                         ) : null}
                       </div>
                     </article>
@@ -575,16 +705,16 @@ function AdminLeadsPage() {
                   <section className="admin-card-panel admin-product-builder">
                     <div className="admin-product-builder-head">
                       <div>
-                        <p className="eyebrow">Product studio</p>
-                        <h2>{editingProductId ? "Update Product" : "Add New Product"}</h2>
+                        <p className="eyebrow">Quản lý sản phẩm</p>
+                        <h2>{editingProductId ? "Cập nhật sản phẩm" : "Thêm sản phẩm mới"}</h2>
                       </div>
 
                       <div className="admin-product-builder-actions">
                         <button className="btn btn-secondary" type="button" onClick={resetProductForm}>
-                          Save Draft
+                          Lưu nháp
                         </button>
                         <button className="btn btn-primary" form="admin-product-form" type="submit" disabled={submitting}>
-                          {submitting ? "Dang luu..." : editingProductId ? "Update Product" : "Add Product"}
+                          {submitting ? "Đang lưu..." : editingProductId ? "Cập nhật" : "Thêm mới"}
                         </button>
                       </div>
                     </div>
@@ -593,93 +723,113 @@ function AdminLeadsPage() {
                       <div className="admin-product-main">
                         <section className="admin-product-panel">
                           <div className="admin-product-panel-head">
-                            <h3>General Information</h3>
+                            <h3>Thông tin chung</h3>
                           </div>
 
                           <div className="admin-product-form-grid">
                             <label className="admin-field">
-                              <span>Name Product</span>
-                              <input name="name" placeholder="Ten san pham" value={productForm.name} onChange={handleProductFieldChange} required />
+                              <span>Tên sản phẩm</span>
+                              <input name="name" placeholder="Nhập tên sản phẩm" value={productForm.name} onChange={handleProductFieldChange} required />
                             </label>
                             <label className="admin-field">
-                              <span>Slug Product</span>
-                              <input name="slug" placeholder="Slug" value={productForm.slug} onChange={handleProductFieldChange} />
+                              <span>Đường dẫn (slug)</span>
+                              <input name="slug" placeholder="Để trống để tạo tự động" value={productForm.slug} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field admin-field-span-2">
-                              <span>Description Product</span>
-                              <textarea name="description" placeholder="Mo ta chi tiet" rows="5" value={productForm.description} onChange={handleProductFieldChange} />
+                              <span>Mô tả chi tiết</span>
+                              <textarea name="description" placeholder="Nhập mô tả chi tiết" rows="5" value={productForm.description} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field admin-field-span-2">
-                              <span>Short Description</span>
-                              <input name="shortDescription" placeholder="Mo ta ngan" value={productForm.shortDescription} onChange={handleProductFieldChange} />
+                              <span>Mô tả ngắn</span>
+                              <input name="shortDescription" placeholder="Nhập mô tả ngắn" value={productForm.shortDescription} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
-                              <span>Brand</span>
-                              <input name="brand" placeholder="Thuong hieu" value={productForm.brand} onChange={handleProductFieldChange} required />
+                              <span>Thương hiệu</span>
+                              <input name="brand" placeholder="VD: ASUS, DELL" value={productForm.brand} onChange={handleProductFieldChange} required />
                             </label>
                             <label className="admin-field">
                               <span>Badge</span>
-                              <input name="badge" placeholder="Badge" value={productForm.badge} onChange={handleProductFieldChange} />
+                              <input name="badge" placeholder="VD: HOT, NEW, SALE" value={productForm.badge} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
                               <span>CPU</span>
-                              <input name="specs.cpu" placeholder="CPU" value={productForm.specs.cpu} onChange={handleProductFieldChange} />
+                              <input name="specs.cpu" placeholder="VD: Core i9-14900HX" value={productForm.specs.cpu} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
                               <span>RAM</span>
-                              <input name="specs.ram" placeholder="RAM" value={productForm.specs.ram} onChange={handleProductFieldChange} />
+                              <input name="specs.ram" placeholder="VD: 32GB DDR5" value={productForm.specs.ram} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
                               <span>SSD</span>
-                              <input name="specs.ssd" placeholder="SSD" value={productForm.specs.ssd} onChange={handleProductFieldChange} />
+                              <input name="specs.ssd" placeholder="VD: 1TB NVMe" value={productForm.specs.ssd} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
                               <span>GPU</span>
-                              <input name="specs.gpu" placeholder="GPU" value={productForm.specs.gpu} onChange={handleProductFieldChange} />
+                              <input name="specs.gpu" placeholder="VD: RTX 4080 12GB" value={productForm.specs.gpu} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field admin-field-span-2">
-                              <span>Display</span>
-                              <input name="specs.display" placeholder="Man hinh" value={productForm.specs.display} onChange={handleProductFieldChange} />
+                              <span>Màn hình</span>
+                              <input name="specs.display" placeholder="VD: 16 inch QHD+ 240Hz" value={productForm.specs.display} onChange={handleProductFieldChange} />
+                            </label>
+                            <label className="admin-field admin-field-span-2">
+                              <span>Cổng giao tiếp</span>
+                              <input name="specs.ports" placeholder="VD: 2x USB-C, 2x USB-A, HDMI" value={productForm.specs.ports} onChange={handleProductFieldChange} />
+                            </label>
+                            <label className="admin-field">
+                              <span>Hệ điều hành</span>
+                              <input name="specs.os" placeholder="VD: Windows 11 Home" value={productForm.specs.os} onChange={handleProductFieldChange} />
+                            </label>
+                            <label className="admin-field">
+                              <span>Màu sắc</span>
+                              <input name="specs.color" placeholder="VD: Eclipse Gray" value={productForm.specs.color} onChange={handleProductFieldChange} />
+                            </label>
+                            <label className="admin-field">
+                              <span>Kích thước</span>
+                              <input name="specs.dimensions" placeholder="VD: 35.4 x 25.1 x 2.24 cm" value={productForm.specs.dimensions} onChange={handleProductFieldChange} />
+                            </label>
+                            <label className="admin-field">
+                              <span>Trọng lượng</span>
+                              <input name="specs.weight" placeholder="VD: 2.5 kg" value={productForm.specs.weight} onChange={handleProductFieldChange} />
                             </label>
                           </div>
                         </section>
 
                         <section className="admin-product-panel">
                           <div className="admin-product-panel-head">
-                            <h3>Pricing And Stock</h3>
+                            <h3>Giá và kho hàng</h3>
                           </div>
 
                           <div className="admin-product-form-grid">
                             <label className="admin-field">
-                              <span>Base Pricing</span>
-                              <input name="price" placeholder="Gia ban" type="number" value={productForm.price} onChange={handleProductFieldChange} />
+                              <span>Giá bán</span>
+                              <input name="price" placeholder="Nhập giá bán" type="number" value={productForm.price} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
-                              <span>Stock</span>
-                              <input name="stock" placeholder="Ton kho" type="number" value={productForm.stock} onChange={handleProductFieldChange} />
+                              <span>Tồn kho</span>
+                              <input name="stock" placeholder="Số lượng trong kho" type="number" value={productForm.stock} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
-                              <span>Old Price</span>
-                              <input name="oldPrice" placeholder="Gia cu" type="number" value={productForm.oldPrice} onChange={handleProductFieldChange} />
+                              <span>Giá cũ</span>
+                              <input name="oldPrice" placeholder="Giá gốc (nếu có)" type="number" value={productForm.oldPrice} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
-                              <span>Rating</span>
-                              <input name="rating" placeholder="Rating" type="number" step="0.1" value={productForm.rating} onChange={handleProductFieldChange} />
+                              <span>Đánh giá</span>
+                              <input name="rating" placeholder="Từ 1 đến 5" type="number" step="0.1" value={productForm.rating} onChange={handleProductFieldChange} />
                             </label>
                             <label className="admin-field">
-                              <span>Review Count</span>
-                              <input name="reviewCount" placeholder="So danh gia" type="number" value={productForm.reviewCount} onChange={handleProductFieldChange} />
+                              <span>Lượt đánh giá</span>
+                              <input name="reviewCount" placeholder="Số lượt đánh giá" type="number" value={productForm.reviewCount} onChange={handleProductFieldChange} />
                             </label>
                             <div className="admin-field">
-                              <span>Status</span>
+                              <span>Trạng thái</span>
                               <div className="admin-boolean-row">
                                 <label className="admin-checkbox">
                                   <input name="featured" type="checkbox" checked={productForm.featured} onChange={handleProductFieldChange} />
-                                  <span>Featured</span>
+                                  <span>Nổi bật</span>
                                 </label>
                                 <label className="admin-checkbox">
                                   <input name="isActive" type="checkbox" checked={productForm.isActive} onChange={handleProductFieldChange} />
-                                  <span>Active</span>
+                                  <span>Đang bán</span>
                                 </label>
                               </div>
                             </div>
@@ -690,49 +840,31 @@ function AdminLeadsPage() {
                       <div className="admin-product-side">
                         <section className="admin-product-panel">
                           <div className="admin-product-panel-head">
-                            <h3>Upload Img</h3>
+                            <h3>Hình ảnh</h3>
                           </div>
 
-                          <div className="admin-product-image-stage">
-                            {productForm.image ? (
-                              <img src={productForm.image} alt={productForm.name || "Preview san pham"} />
-                            ) : (
-                              <div className="admin-product-image-empty">
-                                <strong>No Image</strong>
-                                <span>Nhap URL anh de xem truoc</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <label className="admin-field">
-                            <span>Image URL</span>
-                            <input name="image" placeholder="URL anh" value={productForm.image} onChange={handleProductFieldChange} />
-                          </label>
-
-                          <div className="admin-product-thumbs">
-                            {[1, 2, 3].map((index) => (
-                              <div key={index} className="admin-product-thumb">
-                                {productForm.image ? <img src={productForm.image} alt={`Preview ${index}`} /> : <span>+</span>}
-                              </div>
-                            ))}
-                            <div className="admin-product-thumb admin-product-thumb-add">
-                              <span>+</span>
-                            </div>
-                          </div>
+                          <ImageUploader
+                            value={productImagesValue}
+                            onChange={(newValue) => handleProductFieldChange({ target: { name: "images", value: newValue } })}
+                          />
                         </section>
 
                         <section className="admin-product-panel">
                           <div className="admin-product-panel-head">
-                            <h3>Category</h3>
+                            <h3>Danh mục</h3>
                           </div>
-
                           <div className="admin-product-form-grid admin-product-form-grid-single">
                             <label className="admin-field">
-                              <span>Product Category</span>
-                              <input name="category" placeholder="Danh muc" value={productForm.category} onChange={handleProductFieldChange} required />
+                              <span>Chọn danh mục</span>
+                              <select name="category" value={productForm.category} onChange={handleProductFieldChange} required>
+                                <option value="" disabled>-- Chọn một danh mục --</option>
+                                {categories.map((cat) => (
+                                  <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                ))}
+                              </select>
                             </label>
-                            <button className="btn btn-secondary admin-category-helper" type="button">
-                              Add Category
+                            <button className="btn btn-secondary admin-category-helper" type="button" onClick={() => setActiveTab("categories")}>
+                              Thêm danh mục
                             </button>
                           </div>
                         </section>
@@ -742,17 +874,17 @@ function AdminLeadsPage() {
 
                   <section className="admin-card-panel">
                     <div className="admin-section-head">
-                      <h2>Danh sach san pham</h2>
+                      <h2>Danh sách sản phẩm</h2>
                     </div>
                     <div className="admin-table-wrap">
                       <table className="admin-table">
                         <thead>
                           <tr>
-                            <th>San pham</th>
-                            <th>Gia</th>
-                            <th>Ton kho</th>
-                            <th>Trang thai</th>
-                            <th>Thao tac</th>
+                            <th>Sản phẩm</th>
+                            <th>Giá</th>
+                            <th>Tồn kho</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -764,17 +896,83 @@ function AdminLeadsPage() {
                               </td>
                               <td>
                                 <strong>{formatCurrency(product.price)}</strong>
-                                <span>{product.oldPrice ? formatCurrency(product.oldPrice) : "Khong co gia cu"}</span>
+                                <span>{product.oldPrice ? formatCurrency(product.oldPrice) : "Không có giá cũ"}</span>
                               </td>
                               <td>{product.stock}</td>
-                              <td>{product.isActive ? "Dang ban" : "Da an"}</td>
+                              <td>{product.isActive ? "Đang bán" : "Đã ẩn"}</td>
                               <td>
                                 <div className="admin-row-actions">
                                   <button className="btn btn-secondary" type="button" onClick={() => handleEditProduct(product)}>
-                                    Sua
+                                    Sửa
                                   </button>
                                   <button className="btn btn-secondary" type="button" onClick={() => handleToggleProductStatus(product)}>
-                                    {product.isActive ? "An san pham" : "Hien lai"}
+                                    {product.isActive ? "Ẩn" : "Hiện"}
+                                  </button>
+                                  <button className="btn btn-danger" type="button" onClick={() => handleDeleteProduct(product._id)}>
+                                    Xóa
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </div>
+              ) : null}
+
+              {activeTab === "categories" ? (
+                <div className="admin-tab-layout">
+                  <section className="admin-card-panel">
+                    <div className="admin-section-head">
+                      <h2>{editingCategoryId ? "Sửa danh mục" : "Thêm danh mục mới"}</h2>
+                      {editingCategoryId ? (
+                        <button className="btn btn-secondary" type="button" onClick={resetCategoryForm}>
+                          Hủy
+                        </button>
+                      ) : null}
+                    </div>
+                    <form className="admin-form-grid" onSubmit={handleSubmitCategory}>
+                      <input name="name" placeholder="Tên danh mục" value={categoryForm.name} onChange={handleCategoryFieldChange} required />
+                      <input name="slug" placeholder="Đường dẫn (để trống tự tạo)" value={categoryForm.slug} onChange={handleCategoryFieldChange} />
+                      <textarea name="description" placeholder="Mô tả ngắn" value={categoryForm.description} onChange={handleCategoryFieldChange} className="admin-form-span-2" rows="3" />
+                      <button className="btn btn-primary admin-form-span-2" type="submit" disabled={submitting}>
+                        {submitting ? "Đang lưu..." : editingCategoryId ? "Cập nhật" : "Thêm mới"}
+                      </button>
+                    </form>
+                  </section>
+
+                  <section className="admin-card-panel">
+                    <div className="admin-section-head">
+                      <h2>Danh sách danh mục</h2>
+                    </div>
+                    <div className="admin-table-wrap">
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th>Tên danh mục</th>
+                            <th>Mô tả</th>
+                            <th>Ngày tạo</th>
+                            <th>Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {categories.map((cat) => (
+                            <tr key={cat._id}>
+                              <td>
+                                <strong>{cat.name}</strong>
+                                <span>/{cat.slug}</span>
+                              </td>
+                              <td>{cat.description || "Chưa có mô tả"}</td>
+                              <td>{formatDateTime(cat.createdAt)}</td>
+                              <td>
+                                <div className="admin-row-actions">
+                                  <button className="btn btn-secondary" type="button" onClick={() => handleEditCategory(cat)}>
+                                    Sửa
+                                  </button>
+                                  <button className="btn btn-danger" type="button" onClick={() => handleDeleteCategory(cat._id)}>
+                                    Xóa
                                   </button>
                                 </div>
                               </td>
@@ -790,18 +988,18 @@ function AdminLeadsPage() {
               {activeTab === "orders" ? (
                 <section className="admin-card-panel">
                   <div className="admin-section-head">
-                    <h2>Quan ly don hang</h2>
+                    <h2>Quản lý đơn hàng</h2>
                   </div>
                   <div className="admin-table-wrap">
                     <table className="admin-table">
                       <thead>
                         <tr>
-                          <th>Khach hang</th>
-                          <th>Lien he</th>
-                          <th>Thanh toan</th>
-                          <th>Trang thai</th>
-                          <th>Ngay tao</th>
-                          <th>Thao tac</th>
+                          <th>Khách hàng</th>
+                          <th>Liên hệ</th>
+                          <th>Thanh toán</th>
+                          <th>Trạng thái</th>
+                          <th>Ngày tạo</th>
+                          <th>Thao tác</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -809,7 +1007,7 @@ function AdminLeadsPage() {
                           <tr key={order._id}>
                             <td>
                               <strong>{order.customer?.fullName}</strong>
-                              <span>{order.items?.length || 0} san pham</span>
+                              <span>{order.items?.length || 0} sản phẩm</span>
                             </td>
                             <td>
                               <span>{order.customer?.email}</span>
@@ -831,8 +1029,8 @@ function AdminLeadsPage() {
                                 }
                               >
                                 {ORDER_STATUSES.map((status) => (
-                                  <option key={status} value={status}>
-                                    {status}
+                                  <option key={status.value} value={status.value}>
+                                    {status.label}
                                   </option>
                                 ))}
                               </select>
@@ -840,7 +1038,7 @@ function AdminLeadsPage() {
                             <td>{formatDate(order.createdAt)}</td>
                             <td>
                               <button className="btn btn-secondary" type="button" onClick={() => handleOrderStatusSave(order._id)}>
-                                Luu
+                                Lưu
                               </button>
                             </td>
                           </tr>
@@ -855,39 +1053,39 @@ function AdminLeadsPage() {
                 <div className="admin-tab-layout">
                   <section className="admin-card-panel">
                     <div className="admin-section-head">
-                      <h2>Tao tai khoan moi</h2>
+                      <h2>Tạo tài khoản mới</h2>
                     </div>
                     <form className="admin-form-grid" onSubmit={handleCreateUser}>
-                      <input name="fullName" placeholder="Ho ten" value={newUserForm.fullName} onChange={handleNewUserFieldChange} required />
+                      <input name="fullName" placeholder="Họ và tên" value={newUserForm.fullName} onChange={handleNewUserFieldChange} required />
                       <input name="email" placeholder="Email" type="email" value={newUserForm.email} onChange={handleNewUserFieldChange} required />
-                      <input name="password" placeholder="Mat khau" type="password" value={newUserForm.password} onChange={handleNewUserFieldChange} required />
+                      <input name="password" placeholder="Mật khẩu" type="password" value={newUserForm.password} onChange={handleNewUserFieldChange} required />
                       <select name="role" value={newUserForm.role} onChange={handleNewUserFieldChange}>
                         {USER_ROLES.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
+                          <option key={role.value} value={role.value}>
+                            {role.label}
                           </option>
                         ))}
                       </select>
                       <button className="btn btn-primary admin-form-span-2" type="submit" disabled={submitting}>
-                        {submitting ? "Dang tao..." : "Tao tai khoan"}
+                        {submitting ? "Đang tạo..." : "Tạo tài khoản"}
                       </button>
                     </form>
                   </section>
 
                   <section className="admin-card-panel">
                     <div className="admin-section-head">
-                      <h2>Danh sach tai khoan</h2>
+                      <h2>Danh sách tài khoản</h2>
                     </div>
                     <div className="admin-table-wrap">
                       <table className="admin-table">
                         <thead>
                           <tr>
-                            <th>Ho ten</th>
+                            <th>Họ tên</th>
                             <th>Email</th>
-                            <th>Role</th>
-                            <th>Trang thai</th>
-                            <th>Reset mat khau</th>
-                            <th>Thao tac</th>
+                            <th>Vai trò</th>
+                            <th>Trạng thái</th>
+                            <th>Đặt lại mật khẩu</th>
+                            <th>Thao tác</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -914,8 +1112,8 @@ function AdminLeadsPage() {
                                   onChange={(event) => handleUserDraftChange(item.id, "role", event.target.value)}
                                 >
                                   {USER_ROLES.map((role) => (
-                                    <option key={role} value={role}>
-                                      {role}
+                                    <option key={role.value} value={role.value}>
+                                      {role.label}
                                     </option>
                                   ))}
                                 </select>
@@ -926,14 +1124,14 @@ function AdminLeadsPage() {
                                   value={String(userDrafts[item.id]?.isActive ?? item.isActive)}
                                   onChange={(event) => handleUserDraftChange(item.id, "isActive", event.target.value === "true")}
                                 >
-                                  <option value="true">Active</option>
-                                  <option value="false">Locked</option>
+                                  <option value="true">Hoạt động</option>
+                                  <option value="false">Bị khóa</option>
                                 </select>
                               </td>
                               <td>
                                 <input
                                   className="admin-inline-input"
-                                  placeholder="Bo trong neu khong doi"
+                                  placeholder="Bỏ trống nếu không đổi"
                                   type="password"
                                   value={userDrafts[item.id]?.password || ""}
                                   onChange={(event) => handleUserDraftChange(item.id, "password", event.target.value)}
@@ -941,7 +1139,7 @@ function AdminLeadsPage() {
                               </td>
                               <td>
                                 <button className="btn btn-secondary" type="button" onClick={() => handleSaveUser(item.id)}>
-                                  Luu
+                                  Lưu
                                 </button>
                               </td>
                             </tr>
@@ -956,18 +1154,18 @@ function AdminLeadsPage() {
               {activeTab === "leads" ? (
                 <section className="admin-card-panel">
                   <div className="admin-section-head">
-                    <h2>Danh sach lead</h2>
+                    <h2>Danh sách khách hàng tiềm năng</h2>
                   </div>
                   <div className="admin-table-wrap">
                     <table className="admin-table">
                       <thead>
                         <tr>
-                          <th>Khach hang</th>
-                          <th>Thong tin</th>
-                          <th>Dich vu</th>
-                          <th>Noi dung</th>
-                          <th>Trang thai</th>
-                          <th>Thao tac</th>
+                          <th>Khách hàng</th>
+                          <th>Thông tin</th>
+                          <th>Dịch vụ quan tâm</th>
+                          <th>Nội dung</th>
+                          <th>Trạng thái</th>
+                          <th>Thao tác</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -975,7 +1173,7 @@ function AdminLeadsPage() {
                           <tr key={lead._id}>
                             <td>
                               <strong>{lead.fullName}</strong>
-                              <span>{lead.companyName || "Chua co cong ty"}</span>
+                              <span>{lead.companyName || "Chưa có công ty"}</span>
                             </td>
                             <td>
                               <span>{lead.email}</span>
@@ -995,15 +1193,15 @@ function AdminLeadsPage() {
                                 }
                               >
                                 {LEAD_STATUSES.map((status) => (
-                                  <option key={status} value={status}>
-                                    {status}
+                                  <option key={status.value} value={status.value}>
+                                    {status.label}
                                   </option>
                                 ))}
                               </select>
                             </td>
                             <td>
                               <button className="btn btn-secondary" type="button" onClick={() => handleLeadStatusSave(lead._id)}>
-                                Luu
+                                Lưu
                               </button>
                             </td>
                           </tr>

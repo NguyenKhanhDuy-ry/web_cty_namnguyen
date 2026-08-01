@@ -17,7 +17,7 @@ const createLead = async (req, res, next) => {
 
     return res.status(201).json({
       success: true,
-      message: "Đã gửi yêu cầu liên hệ",
+      message: "Đã gửi yêu cầu liên hệ thành công",
       data: lead
     });
   } catch (error) {

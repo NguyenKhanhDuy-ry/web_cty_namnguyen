@@ -13,19 +13,26 @@ export const getDiscountText = (product) => {
 };
 
 export const getProductGallery = (product) => {
-  const baseImage = product?.image || "";
-  const gallery = Array.isArray(product?.gallery) ? product.gallery.filter(Boolean) : [];
-  const images = [baseImage, ...gallery].filter(Boolean);
+  const baseImage = product?.image || product?.mainImage || "";
+  const gallery = Array.isArray(product?.gallery)
+    ? product.gallery.filter(Boolean)
+    : [];
+  const galleryImages = Array.isArray(product?.galleryImages)
+    ? product.galleryImages.filter(Boolean)
+    : [];
+  const images = [baseImage, ...gallery, ...galleryImages].filter(Boolean);
 
   if (!images.length) {
     return [];
   }
 
-  while (images.length < 3) {
-    images.push(images[0]);
+  const uniqueImages = [...new Set(images)];
+
+  if (uniqueImages.length < 3) {
+    return uniqueImages;
   }
 
-  return images.slice(0, 3);
+  return uniqueImages.slice(0, 3);
 };
 
 export const getShippingFee = (subtotal) => {

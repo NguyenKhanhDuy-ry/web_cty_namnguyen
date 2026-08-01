@@ -23,38 +23,57 @@ function ProductDetailPage() {
       try {
         setIsLoading(true);
         setError("");
+        setProduct(null);
+        setRelatedProducts([]);
+        setActiveImage("");
 
         const productResponse = await api.get(`/products/${productId}`);
         const currentProduct = productResponse.data?.data;
 
+        if (!currentProduct) {
+          throw new Error("Không tìm thấy sản phẩm");
+        }
+
         setProduct(currentProduct);
         const gallery = getProductGallery(currentProduct);
-        setActiveImage(gallery[0] || currentProduct.image);
+        setActiveImage(gallery[0] || currentProduct.image || "");
 
         if (currentProduct?.category) {
           const relatedResponse = await api.get("/products", {
             params: {
               category: currentProduct.category,
-              limit: 4
+              limit: 4,
+              page: 1
             }
           });
 
-          const nextRelatedProducts = (relatedResponse.data?.data || []).filter(
-            (item) => item._id !== currentProduct._id
-          );
+          const relatedPayload = relatedResponse.data?.data || {};
+          const relatedItems = Array.isArray(relatedPayload.products)
+            ? relatedPayload.products
+            : Array.isArray(relatedPayload)
+              ? relatedPayload
+              : [];
 
+          const nextRelatedProducts = relatedItems.filter((item) => item._id !== currentProduct._id);
           setRelatedProducts(nextRelatedProducts.slice(0, 3));
         } else {
           setRelatedProducts([]);
         }
       } catch (requestError) {
-        setError(requestError.response?.data?.message || "Không tải được sản phẩm");
+        const statusCode = requestError.response?.status;
+        setError(
+          statusCode === 404
+            ? "Không tìm thấy sản phẩm"
+            : requestError.response?.data?.message || "Không tải được sản phẩm"
+        );
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadProduct();
+    if (productId) {
+      loadProduct();
+    }
   }, [productId]);
 
   const gallery = useMemo(() => getProductGallery(product), [product]);
@@ -62,6 +81,7 @@ function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product) return;
     addToCart(product, quantity);
+    alert(`Đã thêm "${product.name}" (số lượng: ${quantity}) vào giỏ hàng.`);
   };
 
   const handleBuyNow = () => {
@@ -104,7 +124,7 @@ function ProductDetailPage() {
         </div>
 
         <Link className="back-link" to="/">
-          Quay lai
+          Quay lại
         </Link>
 
         <div className="product-detail-hero">
@@ -182,14 +202,41 @@ function ProductDetailPage() {
               </button>
             </div>
 
-            <button className="ecom-btn ecom-btn-primary product-buy-now-btn" type="button" onClick={handleBuyNow}>
-              Mua ngay - {formatCurrency(product.price * quantity)}
-            </button>
+            <div className="product-actions-inline">
+              <button className="ecom-btn ecom-btn-primary product-buy-now-btn" type="button" onClick={handleBuyNow}>
+                Mua ngay - {formatCurrency(product.price * quantity)}
+              </button>
+            </div>
+
+            <div className="share-row">
+              <span>Chia sẻ:</span>
+              <button type="button">Facebook</button>
+              <button type="button">Zalo</button>
+              <button type="button">Copy link</button>
+            </div>
 
             <div className="product-policy-row">
-              <article>BH chinh hang</article>
+              <article>BH chính hãng</article>
               <article>Giao trong 2h</article>
-              <article>Doi tra 30 ngay</article>
+              <article>Đổi trả 30 ngày</article>
+            </div>
+
+            <div className="product-stock-status">
+              <strong>
+                {product.stock > 0 ? (product.stock <= 5 ? "Sắp hết hàng" : "Còn hàng") : "Hết hàng"}
+              </strong>
+              <span>Kho: {product.stock}</span>
+            </div>
+
+            <div className="product-meta-list">
+              <div>
+                <span>Bảo hành</span>
+                <strong>24 tháng chính hãng</strong>
+              </div>
+              <div>
+                <span>Khuyến mãi</span>
+                <strong>Trả góp 0% - Giao ngay trong 2 giờ</strong>
+              </div>
             </div>
           </div>
         </div>
@@ -201,7 +248,7 @@ function ProductDetailPage() {
               type="button"
               onClick={() => setActiveTab("specs")}
             >
-              Thong so ky thuat
+              Thông số kỹ thuật
             </button>
             <button
               className={activeTab === "description" ? "is-active" : ""}
@@ -221,14 +268,14 @@ function ProductDetailPage() {
 
           {activeTab === "specs" ? (
             <div className="product-spec-table">
-              <div><span>Bo vi xu ly</span><strong>{product.specs?.cpu}</strong></div>
-              <div><span>RAM</span><strong>{product.specs?.ram}</strong></div>
-              <div><span>O cung</span><strong>{product.specs?.ssd}</strong></div>
-              <div><span>Card do hoa</span><strong>{product.specs?.gpu}</strong></div>
-              <div><span>Man hinh</span><strong>{product.specs?.display}</strong></div>
+              <div><span>Bộ vi xử lý</span><strong>{product.specs?.cpu || "Đang cập nhật"}</strong></div>
+              <div><span>RAM</span><strong>{product.specs?.ram || "Đang cập nhật"}</strong></div>
+              <div><span>Ổ cứng</span><strong>{product.specs?.ssd || "Đang cập nhật"}</strong></div>
+              <div><span>Card đồ họa</span><strong>{product.specs?.gpu || "Đang cập nhật"}</strong></div>
+              <div><span>Màn hình</span><strong>{product.specs?.display || "Đang cập nhật"}</strong></div>
               <div><span>Thương hiệu</span><strong>{product.brand}</strong></div>
-              <div><span>Danh muc</span><strong>{product.category}</strong></div>
-              <div><span>Ton kho</span><strong>{product.stock}</strong></div>
+              <div><span>Danh mục</span><strong>{product.category}</strong></div>
+              <div><span>Tồn kho</span><strong>{product.stock}</strong></div>
             </div>
           ) : null}
 
@@ -239,15 +286,24 @@ function ProductDetailPage() {
                   product.shortDescription ||
                   "Sản phẩm chính hãng, bảo hành rõ ràng và tối ưu cho nhu cầu sử dụng thực tế."}
               </p>
+              <div className="product-feature-list">
+                <div>Thiết kế tối ưu cho hiệu năng chơi game và làm việc</div>
+                <div>Hệ thống tản nhiệt mạnh, bền bỉ trong thời gian dài</div>
+                <div>Đầy đủ cổng kết nối và hỗ trợ nâng cấp linh hoạt</div>
+              </div>
             </div>
           ) : null}
 
           {activeTab === "reviews" ? (
             <div className="product-description-panel">
-              <p>
-                Đánh giá trung bình {product.rating || 4.9}/5 từ {product.reviewCount || 248} khách hàng.
-                Phan nay hien dang duoc dong bo them voi he thong review.
-              </p>
+              <div className="review-card">
+                <strong>4.9/5 từ {product.reviewCount || 248} khách hàng</strong>
+                <p>"Laptop chạy mượt, hiệu năng ổn định và hỗ trợ tốt cho cả gaming lẫn đồ họa."</p>
+              </div>
+              <div className="review-card">
+                <strong>4.8/5</strong>
+                <p>"Giao hàng nhanh, tư vấn rất rõ và sản phẩm đúng như mô tả."</p>
+              </div>
             </div>
           ) : null}
         </div>
@@ -257,7 +313,7 @@ function ProductDetailPage() {
         <section className="ecom-section related-products-section">
           <div className="section-heading">
             <div>
-              <p className="section-label">Goi y</p>
+              <p className="section-label">Gợi ý</p>
               <h2>Sản phẩm liên quan</h2>
             </div>
           </div>

@@ -33,7 +33,7 @@ function CartPage() {
               <h1>Sản phẩm đã chọn</h1>
             </div>
             <Link className="section-link" to="/">
-              Tiếp tục mua sắm
+              Tiep tuc mua sam
             </Link>
           </div>
 
@@ -41,7 +41,7 @@ function CartPage() {
             {items.map((item) => (
               <article key={item._id} className="cart-item-card">
                 <Link className="cart-item-image" to={`/san-pham/${item._id}`}>
-                  <img src={item.image} alt={item.name} />
+                  <img src={item.thumbnail || item.image} alt={item.name} />
                 </Link>
 
                 <div className="cart-item-body">
@@ -69,7 +69,7 @@ function CartPage() {
                 </div>
 
                 <button className="cart-remove-btn" type="button" onClick={() => removeFromCart(item._id)}>
-                  Xóa
+                  Xoa
                 </button>
               </article>
             ))}
@@ -77,18 +77,18 @@ function CartPage() {
         </div>
 
         <aside className="cart-summary-panel">
-          <h2>Tạm tính đơn hàng</h2>
+          <h2>Tam tinh don hang</h2>
 
           <div className="summary-line">
-            <span>Tạm tính</span>
+            <span>Tam tinh</span>
             <strong>{formatCurrency(subtotal)}</strong>
           </div>
           <div className="summary-line">
-            <span>Vận chuyển</span>
-            <strong>{shippingFee === 0 ? "Miễn phí" : formatCurrency(shippingFee)}</strong>
+            <span>Van chuyen</span>
+            <strong>{shippingFee === 0 ? "Mien phi" : formatCurrency(shippingFee)}</strong>
           </div>
           <div className="summary-line summary-line-total">
-            <span>Tổng cộng</span>
+            <span>Tong cong</span>
             <strong>{formatCurrency(totalAmount)}</strong>
           </div>
 
@@ -97,7 +97,7 @@ function CartPage() {
             type="button"
             onClick={() => navigate("/thanh-toan")}
           >
-            Tiến hành thanh toán
+            Tien hanh thanh toan
           </button>
         </aside>
       </div>

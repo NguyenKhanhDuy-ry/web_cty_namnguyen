@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import SiteDescription from "../components/SiteDescription";
 import ProductCard from "../components/ProductCard";
 import api from "../services/api";
 
@@ -11,10 +12,10 @@ const fallbackCompany = {
     "Chính hãng 100%, trả góp 0%, bảo hành 24 tháng. Tư vấn đúng nhu cầu và giao nhanh trên toàn quốc.",
   phone: "18006868",
   email: "sales@namnguyen.vn",
-  address: "123 Nguyễn Huệ, Quận 1, TP.HCM"
+  address: "123 Nguyen Hue, Quan 1, TP.HCM"
 };
 
-const trustBadges = ["Hàng chính hãng", "Trả góp 0%", "BH 24 tháng", "4.9 sao đánh giá"];
+const trustBadges = ["Chính hãng 100%", "Trả góp 0%", "Bảo hành 24 tháng", "4.9 sao đánh giá"];
 
 const serviceHighlights = [
   {
@@ -23,7 +24,7 @@ const serviceHighlights = [
   },
   {
     title: "Bảo hành chính hãng",
-    text: "Bảo hành 12-36 tháng tại trung tâm hãng, hỗ trợ tận nhà."
+    text: "Bảo hành 12-36 tháng tại trung tâm chính hãng, hỗ trợ tận nhà."
   },
   {
     title: "Đổi trả nhanh 30 ngày",
@@ -39,7 +40,7 @@ const categoryCards = [
   { title: "Gaming", subtitle: "RTX 4070-4090", count: "48 sản phẩm" },
   { title: "Laptop Văn phòng", subtitle: "Mỏng nhẹ, bền bỉ", count: "36 sản phẩm" },
   { title: "Đồ họa", subtitle: "Màn OLED 4K", count: "22 sản phẩm" },
-  { title: "MacBook", subtitle: "Chip M4 Series", count: "15 san pham" },
+  { title: "MacBook", subtitle: "Chip M4 Series", count: "15 sản phẩm" },
   { title: "Laptop AI", subtitle: "NPU tích hợp", count: "18 sản phẩm" },
   { title: "Phụ kiện", subtitle: "Chuột, tai nghe", count: "124 sản phẩm" }
 ];
@@ -124,7 +125,7 @@ const brandLogos = ["MSI", "ACER", "DELL", "HP", "LENOVO", "APPLE", "GIGABYTE", 
 const newsItems = [
   {
     tag: "TIN TỨC",
-    title: "RTX 5090 Laptop: Kỷ nguyên mới của laptop gaming cao cấp",
+    title: "RTX 5090 Laptop: Kỳ nguyên mới của laptop gaming cao cấp",
     excerpt: "NVIDIA chính thức ra mắt dòng GPU RTX 5090 dành riêng cho laptop, mang đến hiệu năng chưa từng có...",
     meta: "08/07/2026  -  5 phút đọc",
     image:
@@ -148,7 +149,7 @@ const newsItems = [
   }
 ];
 
-const footerBenefits = ["Giao hàng nhanh", "Bảo hành 24 tháng", "Đổi trả 30 ngày", "Trả góp 0%"];
+const footerBenefits = ["Giao hàng nhanh", "Bao hành 24 thang", "Đổi trả 30 ngay", "Trả góp 0%"];
 
 function HomePage() {
   const [company, setCompany] = useState(fallbackCompany);
@@ -161,15 +162,13 @@ function HomePage() {
         const [siteResponse, productResponse] = await Promise.all([
           api.get("/site"),
           api.get("/products", {
-            params: {
-              featured: true,
-              limit: 8
-            }
+            params: { limit: 8, sort: "newest" }
           })
         ]);
 
         const remoteCompany = siteResponse.data?.data?.company;
-        const remoteProducts = productResponse.data?.data || [];
+        const productPayload = productResponse.data?.data || {};
+        const remoteProducts = Array.isArray(productPayload.products) ? productPayload.products : [];
 
         if (remoteCompany) {
           setCompany({
@@ -236,7 +235,7 @@ function HomePage() {
                 <span>Khách hàng</span>
               </article>
               <article>
-                <strong>3 năm</strong>
+                <strong>3 nam</strong>
                 <span>Kinh nghiệm</span>
               </article>
             </div>
@@ -245,7 +244,7 @@ function HomePage() {
           <div className="hero-visual">
             <div className="hero-preview-card">
               <div className="hero-preview-header">
-                <span>NAM NGUYEN</span>
+                <span>NAM NGUYỄN</span>
                 <span>Ưu đãi tháng 7</span>
               </div>
               <div className="hero-preview-body">
@@ -309,13 +308,15 @@ function HomePage() {
 
         <div className="category-grid">
           {categoryCards.map((item) => (
-            <article key={item.title} className="category-card">
-              <div className="category-icon-box" />
-              <div className="category-card-glow" />
-              <h3>{item.title}</h3>
-              <p>{item.subtitle}</p>
-              <span>{item.count}</span>
-            </article>
+            <a key={item.title} href={`/danh-muc/${item.title.toLowerCase().replace(/ /g, "-")}`} className="category-card">
+              <article>
+                <div className="category-icon-box" />
+                <div className="category-card-glow" />
+                <h3>{item.title}</h3>
+                <p>{item.subtitle}</p>
+                <span>{item.count}</span>
+              </article>
+            </a>
           ))}
         </div>
       </section>
@@ -342,7 +343,7 @@ function HomePage() {
         </div>
 
         <div className="center-cta">
-          <a className="outline-cta" href="#newsletter">
+          <a className="outline-cta" href="/tim-kiem">
             Xem tất cả sản phẩm
           </a>
         </div>
@@ -432,18 +433,18 @@ function HomePage() {
           </article>
           <article>
             <strong>98%</strong>
-            <span>Hài lòng</span>
+            <span>Đánh giá</span>
           </article>
         </div>
 
         <article className="testimonial-feature-card">
           <p>
-            "Mua ASUS ROG tại đây, giao hàng siêu nhanh, máy đúng hàng chính hãng, hiệu năng cực đỉnh.
+            "Mua ASUS ROG tại đây, giao hàng siêu nhanh, máy dùng hàng chính hãng, hiệu năng cực đỉnh.
             Rất hài lòng với dịch vụ tư vấn nhiệt tình."
           </p>
           <div className="testimonial-footer">
             <div>
-              <strong>Nguyễn Minh Tuấn</strong>
+              <strong>Nguyen Minh Tuan</strong>
               <span>Game thủ chuyên nghiệp</span>
             </div>
             <em>ASUS ROG Strix G16</em>
@@ -479,6 +480,7 @@ function HomePage() {
           </article>
         ))}
       </section>
+      <SiteDescription />
     </div>
   );
 }

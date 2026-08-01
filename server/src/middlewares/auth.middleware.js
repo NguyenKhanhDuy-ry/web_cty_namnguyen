@@ -9,7 +9,7 @@ const requireAuth = (req, res, next) => {
   if (scheme !== "Bearer" || !token) {
     return res.status(401).json({
       success: false,
-      message: "Bạn cần đăng nhập để truy cập"
+      message: "Ban can dang nhap de truy cap"
     });
   }
 
@@ -26,7 +26,7 @@ const requireAuth = (req, res, next) => {
   } catch (error) {
     return res.status(401).json({
       success: false,
-      message: "Phiên đăng nhập đã hết hạn hoặc không hợp lệ"
+      message: "Phien dang nhap da het han hoac khong hop le"
     });
   }
 };
@@ -58,14 +58,14 @@ const requireRole = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({
       success: false,
-      message: "Bạn cần đăng nhập để truy cập"
+      message: "Ban can dang nhap de truy cap"
     });
   }
 
   if (!roles.includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: "Bạn không có quyền thực hiện thao tác này"
+      message: "Ban khong co quyen thuc hien thao tac nay"
     });
   }
 

@@ -10,6 +10,7 @@ function ProductCard({ product }) {
 
   const handleAddToCart = () => {
     if (!product?._id) return;
+    alert(`Đã thêm "${product.name}" vào giỏ hàng.`);
     addToCart(product, 1);
   };
 
@@ -22,27 +23,27 @@ function ProductCard({ product }) {
   return (
     <article className="product-card">
       <div className="product-image-wrap">
-        <span className="product-badge">{product.badge || "HOT"}</span>
-        <span className="product-discount">{getDiscountText(product)}</span>
-        <img src={product.image} alt={product.name} />
+        <Link to={productPath} aria-label={`Xem chi tiết ${product.name}`}>
+          <span className="product-badge">{product.badge || "HOT"}</span>
+          <span className="product-discount">{getDiscountText(product)}</span>
+          <img src={product.thumbnail || product.image} alt={product.name} />
+        </Link>
 
         <div className="product-hover-actions">
-          <Link className="product-hover-button" to={productPath} aria-label={`Xem chi tiết ${product.name}`}>
+          <Link className="product-hover-button" to={productPath} aria-label={`Xem chi tiet ${product.name}`}>
             <svg viewBox="0 0 24 24" fill="none">
               <path d="M1.5 12s3.75-6.75 10.5-6.75S22.5 12 22.5 12s-3.75 6.75-10.5 6.75S1.5 12 1.5 12Z" />
               <path d="M12 15.75A3.75 3.75 0 1 0 12 8.25a3.75 3.75 0 0 0 0 7.5Z" />
             </svg>
           </Link>
-          <button className="product-hover-button" type="button" aria-label="Yeu thich">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="m12 20-1.4-1.28C5.4 14 2 10.9 2 7.09 2 4 4.42 1.6 7.5 1.6c1.74 0 3.41.81 4.5 2.09A6.09 6.09 0 0 1 16.5 1.6C19.58 1.6 22 4 22 7.09c0 3.81-3.4 6.91-8.6 11.63L12 20Z" />
-            </svg>
-          </button>
         </div>
       </div>
 
       <div className="product-card-body">
-        <p className="product-brand">{product.brand}</p>
+        <p className="product-brand">
+          {product.category}
+          {product.brand && ` • ${product.brand}`}
+        </p>
         <h3>
           <Link to={productPath}>{product.name}</Link>
         </h3>
@@ -65,13 +66,13 @@ function ProductCard({ product }) {
           <span>{typeof product.oldPrice === "number" ? formatCurrency(product.oldPrice) : product.oldPrice}</span>
         </div>
 
-        <div className="product-actions">
-          <button className="ecom-btn ecom-btn-ghost" type="button" onClick={handleAddToCart}>
-            Thêm giỏ
-          </button>
-          <button className="ecom-btn ecom-btn-primary" type="button" onClick={handleBuyNow}>
-            Mua ngay
-          </button>
+        <div className="product-stock-indicator">
+          <span
+            className={`stock-dot ${product.stock > 5 ? "in-stock" : product.stock > 0 ? "low-stock" : "out-of-stock"}`}
+          />
+          <span>
+            {product.stock > 5 ? "Còn hàng" : product.stock > 0 ? "Sắp hết hàng" : "Hết hàng"}
+          </span>
         </div>
       </div>
     </article>

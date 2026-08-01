@@ -11,10 +11,10 @@ function UserDashboardPage() {
   return (
     <section className="auth-page">
       <div className="auth-card">
-        <p className="eyebrow">Dashboard user</p>
+        <p className="eyebrow">Tài khoản của bạn</p>
         <h1>Xin chào {user?.fullName}</h1>
         <p className="sync-note">
-          Đây là giao diện tượng trưng sau khi đăng nhập thành công. Vai trò hiện tại: {user?.role}.
+          Đây là giao diện quản lý tài khoản của bạn. Vai trò hiện tại: {user?.role === "admin" ? "Quản trị viên" : "Người dùng"}.
         </p>
 
         <div className="account-summary-grid">
@@ -23,8 +23,8 @@ function UserDashboardPage() {
             <span>Email đăng nhập</span>
           </article>
           <article className="account-summary-card">
-            <strong>{user?.role}</strong>
-            <span>Quyen truy cap</span>
+            <strong>{user?.role === "admin" ? "Quản trị viên" : "Người dùng"}</strong>
+            <span>Quyền truy cập</span>
           </article>
         </div>
 

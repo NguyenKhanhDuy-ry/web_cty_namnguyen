@@ -16,6 +16,12 @@ router.patch("/users/:userId", adminController.updateUser);
 router.get("/products", adminController.getProducts);
 router.post("/products", adminController.createProduct);
 router.patch("/products/:productId", adminController.updateProduct);
+router.delete("/products/:productId", adminController.deleteProduct);
+
+router.get("/categories", adminController.getCategories);
+router.post("/categories", adminController.createCategory);
+router.patch("/categories/:categoryId", adminController.updateCategory);
+router.delete("/categories/:categoryId", adminController.deleteCategory);
 
 router.get("/orders", adminController.getOrders);
 router.patch("/orders/:orderId", adminController.updateOrderStatus);

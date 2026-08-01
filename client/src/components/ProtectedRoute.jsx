@@ -10,7 +10,7 @@ function ProtectedRoute({ children, roles = [] }) {
       <section className="auth-page">
         <div className="auth-card">
           <h1>Đang tải phiên đăng nhập</h1>
-          <p>He thong dang xac thuc nguoi dung.</p>
+          <p>Hệ thống đang xác thực người dùng, vui lòng chờ.</p>
         </div>
       </section>
     );
